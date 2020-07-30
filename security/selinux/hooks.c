@@ -198,7 +198,7 @@ static atomic_t selinux_secmark_refcount = ATOMIC_INIT(0);
 
 #ifdef CONFIG_SECURITY_SELINUX_DEVELOP
 // [ SEC_SELINUX_PORTING_COMMON
-#if defined(CONFIG_ALWAYS_ENFORCE) && defined(CONFIG_RKP_KDP)
+#if defined(CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE) && defined(CONFIG_RKP_KDP)
 RKP_RO_AREA int selinux_enforcing;
 #else
 int selinux_enforcing;
@@ -210,8 +210,10 @@ static int __init enforcing_setup(char *str)
 	unsigned long enforcing;
 	if (!kstrtoul(str, 0, &enforcing))
 // [ SEC_SELINUX_PORTING_COMMON
-#ifdef CONFIG_ALWAYS_ENFORCE
+#ifdef CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE
 		selinux_enforcing = 1;
+#elif defined(CONFIG_SECURITY_SELINUX_ALWAYS_PERMISSIVE)
+		selinux_enforcing = 0;
 #else
 		selinux_enforcing = enforcing ? 1 : 0;
 #endif
@@ -229,7 +231,7 @@ static int __init selinux_enabled_setup(char *str)
 	unsigned long enabled;
 	if (!kstrtoul(str, 0, &enabled))
 // [ SEC_SELINUX_PORTING_COMMON
-#ifdef CONFIG_ALWAYS_ENFORCE
+#ifdef CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE
 		selinux_enabled = 1;
 #else
 		selinux_enabled = enabled ? 1 : 0;
@@ -7231,7 +7233,7 @@ RKP_RO_AREA static struct security_hook_list selinux_hooks[] = {
 static __init int selinux_init(void)
 {
 	if (!security_module_enable("selinux")) {
-#ifdef CONFIG_ALWAYS_ENFORCE
+#ifdef CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE
 		selinux_enabled = 1;
 #else
 		selinux_enabled = 0;
@@ -7263,8 +7265,10 @@ static __init int selinux_init(void)
 
 	if (avc_add_callback(selinux_netcache_avc_callback, AVC_CALLBACK_RESET))
 		panic("SELinux: Unable to register AVC netcache callback\n");
-#ifdef CONFIG_ALWAYS_ENFORCE
+#ifdef CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE
 		selinux_enforcing = 1;
+#elif defined(CONFIG_SECURITY_SELINUX_ALWAYS_PERMISSIVE)
+		selinux_enforcing = 0;
 #endif
 	if (selinux_enforcing)
 		printk(KERN_DEBUG "SELinux:  Starting in enforcing mode\n");
@@ -7332,7 +7336,7 @@ static struct nf_hook_ops selinux_nf_ops[] = {
 static int __init selinux_nf_ip_init(void)
 {
 	int err;
-#ifdef CONFIG_ALWAYS_ENFORCE
+#ifdef CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE
 		selinux_enabled = 1;
 #endif
 	if (!selinux_enabled)

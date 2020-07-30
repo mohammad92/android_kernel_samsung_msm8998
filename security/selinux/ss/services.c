@@ -774,9 +774,13 @@ out:
 	kfree(t);
 
 // [ SEC_SELINUX_PORTING_COMMON
-#ifdef CONFIG_ALWAYS_ENFORCE
+#ifdef CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE
 #if !defined(CONFIG_RKP_KDP)
 	selinux_enforcing = 1;
+#endif
+#elif defined(CONFIG_SECURITY_SELINUX_ALWAYS_PERMISSIVE)
+#if !defined(CONFIG_RKP_KDP)
+	selinux_enforcing = 0;
 #endif
 #endif
 // ] SEC_SELINUX_PORTING_COMMON
@@ -1545,9 +1549,13 @@ out:
 	kfree(n);
 
 // [ SEC_SELINUX_PORTING_COMMON
-#ifdef CONFIG_ALWAYS_ENFORCE
+#ifdef CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE
 #if !defined(CONFIG_RKP_KDP)
 	selinux_enforcing = 1;
+#endif
+#elif defined(CONFIG_SECURITY_SELINUX_ALWAYS_PERMISSIVE)
+#if !defined(CONFIG_RKP_KDP)
+	selinux_enforcing = 0;
 #endif
 #endif
 // ] SEC_SELINUX_PORTING_COMMON
@@ -1843,9 +1851,13 @@ static inline int convert_context_handle_invalid_context(struct context *context
 	u32 len;
 
 // [ SEC_SELINUX_PORTING_COMMON
-#ifdef CONFIG_ALWAYS_ENFORCE
+#ifdef CONFIG_SECURITY_SELINUX_ALWAYS_ENFORCE
 #if !defined(CONFIG_RKP_KDP)
 	selinux_enforcing = 1;
+#endif
+#elif defined(CONFIG_SECURITY_SELINUX_ALWAYS_PERMISSIVE)
+#if !defined(CONFIG_RKP_KDP)
+	selinux_enforcing = 0;
 #endif
 #endif
 // ] SEC_SELINUX_PORTING_COMMON
