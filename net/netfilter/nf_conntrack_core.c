@@ -54,7 +54,9 @@
 #include <net/netfilter/nf_nat_helper.h>
 
 /* START_OF_KNOX_NPA */
+#ifdef CONFIG_KNOX_NCM
 #include <net/ncm.h>
+#endif
 /* END_OF_KNOX_NPA */
 
 #define NF_CONNTRACK_VERSION	"0.5.0"
@@ -255,10 +257,12 @@ static void nf_ct_add_to_dying_list(struct nf_conn *ct)
 	struct ct_pcpu *pcpu;
 
 	/* START_OF_KNOX_NPA */
+#ifdef CONFIG_KNOX_NCM
 	/* send dying conntrack entry to collect data */
 	if ( (check_ncm_flag()) && (ct != NULL) && (atomic_read(&ct->startFlow)) ) {
 		knox_collect_conntrack_data(ct, NCM_FLOW_TYPE_CLOSE, 10);
 	}
+#endif
 	/* END_OF_KNOX_NPA */
 
 	/* add this conntrack to the (per cpu) dying list */
@@ -838,7 +842,9 @@ __nf_conntrack_alloc(struct net *net,
 {
 	struct nf_conn *ct;
 	/* START_OF_KNOX_NPA */
+#ifdef CONFIG_KNOX_NCM
 	struct timespec open_timespec;
+#endif
 	/* END_OF_KNOX_NPA */
 
 	if (unlikely(!nf_conntrack_hash_rnd)) {
@@ -869,6 +875,7 @@ __nf_conntrack_alloc(struct net *net,
 
 	spin_lock_init(&ct->lock);
 	/* START_OF_KNOX_NPA */
+#ifdef CONFIG_KNOX_NCM
 	/* initialize the conntrack structure members when memory is allocated */
 	if (ct != NULL) {
 		open_timespec = current_kernel_time();
@@ -885,6 +892,7 @@ __nf_conntrack_alloc(struct net *net,
 		memset(ct->interface_name,'\0',sizeof(ct->interface_name));
 		atomic_set(&ct->startFlow, 0);
 	}
+#endif
 	/* END_OF_KNOX_NPA */
 	ct->tuplehash[IP_CT_DIR_ORIGINAL].tuple = *orig;
 	ct->tuplehash[IP_CT_DIR_ORIGINAL].hnnode.pprev = NULL;
