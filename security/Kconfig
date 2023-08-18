@@ -192,7 +192,6 @@ source security/mstdrv/Kconfig
 source security/integrity/Kconfig
 source security/tz_iccc/Kconfig
 source security/knox_test/Kconfig
-source security/defex_lsm/Kconfig
 source security/dsms/Kconfig
 
 choice
