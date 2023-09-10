@@ -737,11 +737,6 @@ static int sm5720_chg_get_property(struct power_supply *psy,
 					panic("charger WDT is expired!!");
 				}
 				break;
-			case POWER_SUPPLY_EXT_PROP_PAD_VOLT_CTRL:
-				wake_unlock(&charger->wpc_current_wake_lock);
-				cancel_delayed_work(&charger->wc_current_work);
-				sm5720_set_input_current(charger, val->intval);
-				break;
 			default:
 				return -EINVAL;
 			}

@@ -44,10 +44,6 @@
 #include <linux/pm_qos.h>
 #endif
 
-#if defined(CONFIG_MFC_CHARGER)
-#include "../../drivers/battery_v2/include/sec_charging_common.h"
-#endif
-
 /* defines */
 #define	ON				1	// On state
 #define	OFF				0	// Off state
@@ -69,15 +65,6 @@
 #if defined(CONFIG_MFC_CHARGER)
 #define MST_MODE_ON			1	// ON Message to MFC ic
 #define MST_MODE_OFF		0	// OFF Message to MFC ic
-#if 0
-static inline struct power_supply *get_power_supply_by_name(char *name)
-{
-	if (!name)
-		return (struct power_supply *)NULL;
-	else
-		return power_supply_get_by_name(name);
-}
-
 #define psy_do_property(name, function, property, value) \
 {    \
 	struct power_supply *psy;    \
@@ -98,7 +85,6 @@ static inline struct power_supply *get_power_supply_by_name(char *name)
 		}    \
 	}    \
 }
-#endif
 #endif
 
 /* enum definitions */
@@ -178,6 +164,13 @@ static ssize_t store_mst_drv(struct device *dev,
 			     struct device_attribute *attr, const char *buf,
 			     size_t count);
 static int mst_ldo_device_probe(struct platform_device *pdev);
+static inline struct power_supply *get_power_supply_by_name(char *name)
+{
+	if (!name)
+		return (struct power_supply *)NULL;
+	else
+		return power_supply_get_by_name(name);
+}
 
 static void of_mst_hw_onoff(bool on);
 static int boost_enable(void);
@@ -325,10 +318,6 @@ extern void mst_ctrl_of_mst_hw_onoff(bool on)
 				POWER_SUPPLY_PROP_TECHNOLOGY, value);
 		printk("%s : MST_MODE_OFF notify : %d\n", __func__,
 		       value.intval);
-
-		value.intval = 0;
-		psy_do_property("mfc-charger", set, POWER_SUPPLY_EXT_PROP_WPC_EN_MST, value);
-		printk("%s : MFC_IC Disable notify : %d\n", __func__, value.intval);
 #endif
 		/* Boost Disable */
 		printk("%s : boost disable to back to Normal", __func__);
@@ -380,11 +369,6 @@ static void of_mst_hw_onoff(bool on)
 
 	if (on) {
 #if defined(CONFIG_MFC_CHARGER)
-		printk("%s : MFC_IC Enable notify start\n", __func__);
-		value.intval = 1;
-		psy_do_property("mfc-charger", set, POWER_SUPPLY_EXT_PROP_WPC_EN_MST, value);
-		printk("%s : MFC_IC Enable notified : %d\n", __func__, value.intval);
-
 		printk("%s : MST_MODE_ON notify start\n", __func__);
 		value.intval = MST_MODE_ON;
 
@@ -466,10 +450,6 @@ static void of_mst_hw_onoff(bool on)
 				POWER_SUPPLY_PROP_TECHNOLOGY, value);
 		printk("%s : MST_MODE_OFF notify : %d\n", __func__,
 		       value.intval);
-
-		value.intval = 0;
-		psy_do_property("mfc-charger", set, POWER_SUPPLY_EXT_PROP_WPC_EN_MST, value);
-		printk("%s : MFC_IC Disable notify : %d\n", __func__, value.intval);
 #endif
 
 		/* Boost Disable */

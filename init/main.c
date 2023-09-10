@@ -285,12 +285,7 @@ RKP_RO_AREA unsigned int is_boot_recovery = 0;
 #else
 unsigned int is_boot_recovery;
 #endif
-unsigned int is_boot_lpm;
 EXPORT_SYMBOL(is_boot_recovery);
-
-#ifdef CONFIG_SEC_DEBUG_PWDT
-static unsigned int __is_verifiedboot_state;
-#endif
 
 static int __init boot_recovery(char *str)
 {
@@ -307,53 +302,6 @@ static int __init boot_recovery(char *str)
 }
 
 early_param("androidboot.boot_recovery", boot_recovery);
-
-unsigned int __is_boot_recovery(void)
-{
-	return is_boot_recovery;
-}
-EXPORT_SYMBOL(__is_boot_recovery);
-
-static int lpm_check(char *str)
-{
-	if (strncmp(str, "charger", 7) == 0)
-		is_boot_lpm = 1;
-	else
-		is_boot_lpm = 0;
-
-	return is_boot_lpm;
-}
-early_param("androidboot.mode", lpm_check);
-
-unsigned int __is_boot_lpm(void)
-{
-	return is_boot_lpm;
-}
-EXPORT_SYMBOL(__is_boot_lpm);
-#endif
-
-#ifdef CONFIG_SEC_DEBUG_PWDT
-static int  verifiedboot_state_param(char *str)
-{
-	static const char unlocked[] = "orange";
-
-	if (!str)
-		return -EINVAL;
-
-	if (strncmp(str, unlocked, sizeof(unlocked)) == 0)
-		__is_verifiedboot_state = 1;
-	else
-		__is_verifiedboot_state = 0;
-
-	return __is_verifiedboot_state;
-}
-early_param("androidboot.verifiedbootstate", verifiedboot_state_param);
-
-unsigned int is_verifiedboot_state(void)
-{
-	return __is_verifiedboot_state;
-}
-EXPORT_SYMBOL(is_verifiedboot_state);
 #endif
 
 #ifdef CONFIG_RTC_AUTO_PWRON_PARAM

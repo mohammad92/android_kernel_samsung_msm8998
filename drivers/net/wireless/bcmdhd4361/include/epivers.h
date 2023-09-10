@@ -33,7 +33,7 @@
 
 #define	EPI_MINOR_VERSION	13
 
-#define	EPI_RC_NUMBER		36
+#define	EPI_RC_NUMBER		21
 
 #define	EPI_INCREMENTAL_NUMBER	1
 
@@ -43,7 +43,7 @@
 
 #define	EPI_VERSION_NUM		0x640d2401
 
-#define EPI_VERSION_DEV		100.13.36
+#define EPI_VERSION_DEV		100.13.21
 
 /* Driver Version String, ASCII, 32 chars max */
 #define	EPI_VERSION_STR		"100.13.36.1 (r)"

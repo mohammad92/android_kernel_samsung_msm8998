@@ -387,10 +387,6 @@ static void pet_watchdog(struct msm_watchdog_data *wdog_dd)
 #ifdef CONFIG_SEC_DEBUG
 	pr_err("[%s] last_count : %x, new_count : %x, bark_time : %x, bite_time : %x\n", __func__, last_count, count, __raw_readl(wdog_dd->base + WDT0_BARK_TIME), __raw_readl(wdog_dd->base + WDT0_BITE_TIME));
 	sec_debug_save_last_pet(time_ns);
-
-#ifdef CONFIG_SEC_DEBUG_PWDT
-	sec_debug_check_pwdt();
-#endif
 #endif
 
 }

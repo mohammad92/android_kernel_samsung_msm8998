@@ -59,7 +59,6 @@
 #include <linux/file.h>
 #include <linux/configfs.h>
 #include <linux/usb/composite.h>
-#include <linux/kref.h>
 
 /* platform specific definitions */
 /* ex) #define __ANDROID__ */
@@ -123,8 +122,6 @@ struct conn_gadget_dev {
  	/* flag variable that save flush call status
 	 * to check wakeup reason */
 	atomic_t flush;
-	
-	struct kref kref;
 };
 
 static struct usb_interface_descriptor conn_gadget_interface_desc = {
@@ -222,8 +219,6 @@ struct conn_gadget_instance {
 	struct usb_function_instance func_inst;
 	const char *name;
 };
-
-static void conn_gadget_cleanup(struct kref *kref);
 
 static inline struct conn_gadget_dev *func_to_conn_gadget(struct usb_function *f)
 {
@@ -686,11 +681,6 @@ static int conn_gadget_open(struct inode *ip, struct file *fp)
 		return -EBUSY;
 	}
 
-	if (!kref_get_unless_zero(&_conn_gadget_dev->kref)) {
-		CONN_GADGET_ERR("already device removed\n");
-		return -ENODEV;
-	}
-
 	fp->private_data = _conn_gadget_dev;
 
 	/* clear the error latch */
@@ -751,8 +741,6 @@ static int conn_gadget_release(struct inode *ip, struct file *fp)
 	atomic_set(&_conn_gadget_dev->flush, 0);
 
 	conn_gadget_unlock(&_conn_gadget_dev->open_excl);
-	
-	kref_put(&_conn_gadget_dev->kref, conn_gadget_cleanup);
 	return 0;
 }
 
@@ -1218,8 +1206,6 @@ static int conn_gadget_setup(struct conn_gadget_instance *fi_conn_gadget)
 	atomic_set(&dev->write_excl, 0);
 	atomic_set(&dev->flush, 0);
 
-	kref_init(&dev->kref);
-
 	INIT_LIST_HEAD(&dev->tx_idle);
 	INIT_LIST_HEAD(&dev->rx_idle);
 	INIT_LIST_HEAD(&dev->rx_busy);
@@ -1241,13 +1227,13 @@ static int conn_gadget_setup(struct conn_gadget_instance *fi_conn_gadget)
 		printk(KERN_ERR "%s: misc_register f %d\n", __func__, ret);
 		goto err_;
 	}
-
+	
 	android_dev = create_function_device("f_conn_gadget");
 	if (IS_ERR(android_dev))
 		return PTR_ERR(android_dev);
 
 	attrs = conn_gadget_function_attributes;
-
+	
 	if (attrs) {
 		while ((attr = *attrs++) && !err)
 			err = device_create_file(android_dev, attr);
@@ -1268,7 +1254,7 @@ err_:
 	return ret;
 }
 
-static void conn_gadget_cleanup(struct kref *kref)
+static void conn_gadget_cleanup(void)
 {
 	printk(KERN_INFO "conn_gadget_cleanup\n");
 
@@ -1344,8 +1330,8 @@ static void conn_gadget_free_inst(struct usb_function_instance *fi)
 
 	fi_conn_gadget = to_fi_conn_gadget(fi);
 	kfree(fi_conn_gadget->name);
+	conn_gadget_cleanup();
 	kfree(fi_conn_gadget);
-	kref_put(&_conn_gadget_dev->kref, conn_gadget_cleanup);
 }
 
 struct usb_function_instance *alloc_inst_conn_gadget(void)
@@ -1354,15 +1340,15 @@ struct usb_function_instance *alloc_inst_conn_gadget(void)
 	int err;
 
 	fi_conn = kzalloc(sizeof(*fi_conn), GFP_KERNEL);
-
+	
 	if (!fi_conn)
 		return ERR_PTR(-ENOMEM);
-
+	
 	fi_conn->func_inst.set_inst_name = conn_gadget_set_inst_name;
 	fi_conn->func_inst.free_func_inst = conn_gadget_free_inst;
 
 	err = conn_gadget_setup_configfs(fi_conn);
-
+	
 	if (err) {
 		kfree(fi_conn);
 		pr_err("Error setting conn gadget\n");
@@ -1371,7 +1357,7 @@ struct usb_function_instance *alloc_inst_conn_gadget(void)
 
 	config_group_init_type_name(&fi_conn->func_inst.group,
 					"", &conn_gadget_func_type);
-
+	
 	return  &fi_conn->func_inst;
 
 }

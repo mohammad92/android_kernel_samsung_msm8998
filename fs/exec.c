@@ -74,9 +74,6 @@
 
 #ifdef CONFIG_RKP_KDP
 #define rkp_is_nonroot(x) ((x->cred->type)>>1 & 1)
-#ifdef CONFIG_LOD_SEC
-#define rkp_is_lod(x) ((x->cred->type)>>3 & 1)
-#endif /*CONFIG_LOD_SEC*/
 #endif /*CONFIG_RKP_KDP*/
 
 int suid_dumpable = 0;
@@ -1641,14 +1638,6 @@ static int rkp_restrict_fork(struct filename *path)
 	if(!strcmp(path->name,"/system/bin/patchoat")){
 		return 0 ;
 	}
-/* If the Process is from Linux on Dex, 
-then no need to reduce privilege */
-#ifdef CONFIG_LOD_SEC
-    if(rkp_is_lod(current)){
-        return 0;
-    }
-#endif
-
 	if(rkp_is_nonroot(current)){
 		shellcred = prepare_creds();
 		if (!shellcred) {
@@ -2001,6 +1990,7 @@ SYSCALL_DEFINE3(execve,
 		const char __user *const __user *, argv,
 		const char __user *const __user *, envp)
 {
+#if defined CONFIG_SEC_RESTRICT_FORK
 #ifdef CONFIG_RKP_KDP
 	struct filename *path = getname(filename);
 	int error = PTR_ERR(path);
@@ -2012,16 +2002,17 @@ SYSCALL_DEFINE3(execve,
 		rkp_call(RKP_CMDID(0x4b),(u64)path->name,0,0,0,0);
 	}
 #endif
-#if defined CONFIG_SEC_RESTRICT_FORK
-	if (CHECK_ROOT_UID(current) && sec_restrict_fork()) {
-		PRINT_LOG("Restricted making process. PID = %d(%s) "
-		"PPID = %d(%s)\n",
-		current->pid, current->comm,
-		current->parent->pid, current->parent->comm);
+	if(CHECK_ROOT_UID(current)){
+		if(sec_restrict_fork()){
+			PRINT_LOG("Restricted making process. PID = %d(%s) "
+							"PPID = %d(%s)\n",
+			current->pid, current->comm,
+			current->parent->pid, current->parent->comm);
 #ifdef CONFIG_RKP_KDP
 			putname(path);
 #endif
 			return -EACCES;
+		}
 	}
 #ifdef CONFIG_RKP_KDP
 	if(CHECK_ROOT_UID(current) && rkp_cred_enable) {
@@ -2034,11 +2025,10 @@ SYSCALL_DEFINE3(execve,
 			return -EACCES;
 		}
 	}
-#endif
-#endif // End of CONFIG_SEC_RESTRICT_FORK
-#ifdef CONFIG_RKP_KDP
 	putname(path);
 #endif
+#endif	// End of CONFIG_SEC_RESTRICT_FORK
+
 	return do_execve(getname(filename), argv, envp);
 }
 

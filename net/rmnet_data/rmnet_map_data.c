@@ -633,9 +633,9 @@ static void rmnet_map_fill_ipv4_packet_ul_checksum_header(void *iphdr,
 	ul_header->checksum_insert_offset = skb->csum_offset;
 	ul_header->cks_en = 1;
 	if (ip4h->protocol == IPPROTO_UDP)
-		ul_header->udp_ind = 1;
+		ul_header->udp_ip4_ind = 1;
 	else
-		ul_header->udp_ind = 0;
+		ul_header->udp_ip4_ind = 0;
 	/* Changing checksum_insert_offset to network order */
 	hdr++;
 	*hdr = htons(*hdr);
@@ -645,19 +645,13 @@ static void rmnet_map_fill_ipv4_packet_ul_checksum_header(void *iphdr,
 static void rmnet_map_fill_ipv6_packet_ul_checksum_header(void *iphdr,
 	struct rmnet_map_ul_checksum_header_s *ul_header, struct sk_buff *skb)
 {
-	struct ipv6hdr *ip6h = (struct ipv6hdr *)iphdr;
 	unsigned short *hdr = (unsigned short *)ul_header;
 
 	ul_header->checksum_start_offset = htons((unsigned short)
 		(skb_transport_header(skb) - (unsigned char *)iphdr));
 	ul_header->checksum_insert_offset = skb->csum_offset;
 	ul_header->cks_en = 1;
-
-	if (ip6h->nexthdr == IPPROTO_UDP)
-		ul_header->udp_ind = 1;
-	else
-		ul_header->udp_ind = 0;
-
+	ul_header->udp_ip4_ind = 0;
 	/* Changing checksum_insert_offset to network order */
 	hdr++;
 	*hdr = htons(*hdr);
@@ -758,6 +752,6 @@ sw_checksum:
 	ul_header->checksum_start_offset = 0;
 	ul_header->checksum_insert_offset = 0;
 	ul_header->cks_en = 0;
-	ul_header->udp_ind = 0;
+	ul_header->udp_ip4_ind = 0;
 	return ret;
 }

@@ -712,6 +712,7 @@ static long fps_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 						/* for namsan */
 						fps_device->egis_sensor = 0;
+						fps_device->orient = 0;
 
 						/* register irq handler for Namsan */
 						gpio_irq = gpio_to_irq(fps_device->drdy_pin);

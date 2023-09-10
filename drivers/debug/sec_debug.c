@@ -36,7 +36,6 @@
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
-#include <linux/freezer.h>
 #include <linux/qcom/sec_debug.h>
 #include <linux/qcom/sec_debug_summary.h>
 //#include <mach/msm_iomap.h>
@@ -179,20 +178,6 @@ module_param_named(runtime_debug_val, runtime_debug_val, uint, 0644);
 module_param_named(rp_enabled, rp_enabled, uint, 0644);
 #ifdef CONFIG_SEC_SSR_DEBUG_LEVEL_CHK
 module_param_named(enable_cp_debug, enable_cp_debug, uint, 0644);
-#endif
-
-#ifdef CONFIG_SEC_DEBUG_PWDT // checking platform watchdog
-static unsigned long pwdt_start_ms = 0;
-module_param_named(pwdt_start_ms, pwdt_start_ms, ulong, 0644);
-
-static unsigned long pwdt_end_ms = 0;
-module_param_named(pwdt_end_ms, pwdt_end_ms, ulong, 0644);
-
-static unsigned int pwdt_pid = 0;
-module_param_named(pwdt_pid, pwdt_pid, uint, 0644);
-
-static unsigned long pwdt_sync_cnt = 0;
-module_param_named(pwdt_sync_cnt, pwdt_sync_cnt, ulong, 0644);
 #endif
 
 module_param_named(pm8941_rev, pm8941_rev, uint, 0644);
@@ -2545,97 +2530,6 @@ static int __init sec_dbg_setup(char *str)
 }
 
 __setup("sec_dbg=", sec_dbg_setup);
-
-#ifdef CONFIG_SEC_DEBUG_PWDT
-void sec_debug_check_pwdt(void)
-{
-	struct task_struct *wdt_tsk = NULL;
-
-	static unsigned long pwdt_sync_delay = 0;
-	static unsigned long pwdt_restart_delay = 0;
-	static unsigned long pwdt_init_delay = 0;
-	static unsigned long last_sync_cnt = 0;
-
-	if (__is_boot_recovery() || __is_boot_lpm()) {
-		return;
-	}
-
-	if (is_verifiedboot_state()) {
-		return;
-	}
-
-	pr_info("pid[%d], start_ms[%ld], sync_cnt[%ld], restart_delay[%ld], init_dealy[%ld], sync_delay[%ld]\n",
-			pwdt_pid, pwdt_start_ms, pwdt_sync_cnt, pwdt_restart_delay, pwdt_init_delay, pwdt_sync_delay);
-
-	// when pwdt is not initialized
-	if (pwdt_pid == 0 && pwdt_start_ms == 0)
-	{
-		// more than 2000secs
-		if (pwdt_init_delay++ >= SEC_DEBUG_MAX_PWDT_INIT_CNT) {
-			panic("Platform Watchdog couldnot be initialized");
-		}
-	}
-	// when pwdt is killed
-	else if (pwdt_pid != 0 && pwdt_start_ms == 0)
-	{
-		if (pwdt_restart_delay == 0)
-			pr_info("pwdt has been killed!!, start_ms[%ld], end_ms[%ld]\n", pwdt_start_ms, pwdt_end_ms);
-
-		// if pwdt cannot be restarted after 200 seconds since pwdt has been killed, kernel watchdog will trigger Panic
-		if (pwdt_restart_delay++ >= SEC_DEBUG_MAX_PWDT_RESTART_CNT) {
-			panic("Platform Watchdog couldnot be restarted");
-		}
-	}
-	// when pwdt is alive
-	else {
-		pwdt_init_delay = 0;
-		pwdt_restart_delay = 0;
-		rcu_read_lock();
-
-		wdt_tsk = find_task_by_vpid(pwdt_pid);
-
-		/* if cannot find platform watchdog thread, 
-		   it might be killed by system_crash or zygote, We ignored this case.
-		*/
-		if (wdt_tsk == NULL) {
-			rcu_read_unlock();
-			last_sync_cnt = pwdt_sync_cnt;
-			pwdt_sync_delay = 0;
-			pr_info("cannot find watchdog thread!!\n");
-			return;
-		}
-
-		get_task_struct(wdt_tsk);
-		rcu_read_unlock();
-
-		if (unlikely(frozen(wdt_tsk) || freezing(wdt_tsk))) {
-			// clear delay if watchdog thread is frozen or freezing
-			pr_info("wdt_task is frozen : [%d],[%d]\n", frozen(wdt_tsk), freezing(wdt_tsk));
-			last_sync_cnt = pwdt_sync_cnt;
-			pwdt_sync_delay = 0;
-		}
-		else {
-			if (last_sync_cnt == pwdt_sync_cnt) {
-				/* pwdt_sync_cnt is updated in every 30s, but sec_debug_check_pwdt is invoked in every 10s
-				   kernel watchdog will trigger Panic if platform watchdog couldnot update sync_cnt for 400secs
-				*/
-				if (pwdt_sync_delay++ >= SEC_DEBUG_MAX_PWDT_SYNC_CNT) {
-					put_task_struct(wdt_tsk);
-					panic("Platform Watchdog can't update sync_cnt");
-					return;
-				}
-			}
-			else {
-				last_sync_cnt = pwdt_sync_cnt;
-				pwdt_sync_delay = 0;
-			}
-		}
-		put_task_struct(wdt_tsk);
-	}
-
-	return;
-}
-#endif
 
 static void sec_user_fault_dump(void)
 {

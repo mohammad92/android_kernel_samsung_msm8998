@@ -26,7 +26,6 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/sec_bsp.h>
-#include <linux/slab.h>
 
 struct boot_event {
 	unsigned int type;
@@ -118,8 +117,6 @@ static struct boot_event boot_events[] = {
 
 
 LIST_HEAD(device_init_time_list);
-LIST_HEAD(systemserver_init_time_list);
-static bool bootcompleted=false;
 
 static int sec_boot_stat_proc_show(struct seq_file *m, void *v)
 {
@@ -127,7 +124,6 @@ static int sec_boot_stat_proc_show(struct seq_file *m, void *v)
 	unsigned int delta = 0;
 	struct list_head *tmp = NULL;
 	struct device_init_time_entry *entry;
-	struct systemserver_init_time_entry *systemserver_entry;
 
 
 	seq_printf(m,"boot event                                   " \
@@ -169,13 +165,6 @@ static int sec_boot_stat_proc_show(struct seq_file *m, void *v)
 		entry = list_entry(tmp, struct device_init_time_entry, next);
 		seq_printf(m,"%-20s : %lld usces\n",entry->buf, entry->duration); 
 	}
-
-	seq_printf(m,"-----------------------------------------" \
-				"---------------------------------\n");
-	seq_printf(m,"SystemServer services that took long time\n\n");
-	list_for_each_entry (systemserver_entry, &systemserver_init_time_list, next)
-		seq_printf(m, "%s\n",systemserver_entry->buf);
-
 	return 0;
 }
 
@@ -209,17 +198,6 @@ void sec_bootstat_add_initcall(const char *s)
 	}
 }
 
-void sec_boot_stat_record_systemserver(const char *c)
-{
-	struct systemserver_init_time_entry *entry;
-	entry = kmalloc(sizeof(*entry), GFP_KERNEL);
-	if (!entry)
-		return;
-	strncpy(entry->buf,c,MAX_LENGTH_OF_SYSTEMSERVER_LOG);
-	entry->buf[MAX_LENGTH_OF_SYSTEMSERVER_LOG-1] = 0;
-	list_add(&entry->next, &systemserver_init_time_list);
-}
-
 void sec_boot_stat_add(const char * c)
 {
 	int i;
@@ -240,11 +218,6 @@ void sec_boot_stat_add(const char * c)
 		}
 		i = i + 1;
 	}
-
-	if(strcmp(c, "!@Boot: bootcomplete")==0)
-		bootcompleted=true;
-	if ((bootcompleted==false)&&(!strncmp(c, "!@Boot_SystemServer: ", 21)))
-		sec_boot_stat_record_systemserver(c+21);
 }
 
 static struct device *sec_bsp_dev;
